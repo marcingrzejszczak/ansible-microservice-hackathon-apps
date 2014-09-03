@@ -1,0 +1,6 @@
+---
+- hosts: apps
+  sudo: yes
+
+  roles:
+     - jdk8
