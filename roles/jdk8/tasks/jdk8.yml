@@ -1,24 +1,29 @@
-- name: Check if Java has not been already downloaded
-  stat: path=/opt/jdk-8u5-linux-x64.tar.gz
-  register: java_download
-
-- name: Check if Java has not been already installed
-  stat: path=/opt/jdk1.8.0_05
-  register: java_home
-  
-- name: Download JDK8u5 to tmp
-  command: 'wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" http://download.oracle.com/otn-pub/java/jdk/8u5-b13/jdk-8u5-linux-x64.tar.gz -P /opt'
-  when: "java_download.stat.isdir is not defined"
-
-- name: Untar JDK8
-  command: 'tar xzf /opt/jdk-8u5-linux-x64.tar.gz -C /opt/'
-  when: "java_home.stat.isdir is not defined"
-  
-- name: Change access rights to JDK8
-  file: path=/opt/jdk1.8.0_05 group=root owner=root mode=775 recurse=yes
-
-- name: Create JAVA_HOME variable
-  command: export JAVA_HOME=/opt/jdk1.8.0_05
-  
-- name: Append JAVA_HOME to path
-  command: export PATH=$PATH:$JAVA_HOME/bin
+# Ansible playbook to install Java 7 on Debian
+#
+# Thanks to http://www.sysadminslife.com/linux/howto-oracle-sun-java-7-installation-unter-debian-6-squeeze/
+#
+# Author: Gabriel Birke <gb@birke-software.de>
+ 
+  - name: Install wget
+    apt: pkg=wget
+ 
+  - name: Download Java
+    command: 'wget -q -O --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" http://download.oracle.com/otn-pub/java/jdk/8u5-b13/jdk-8u5-linux-x64.tar.gz creates={{java_archive}}' 
+ 
+  - name: Extract Java archive
+    command: "tar -xzf {{java_archive}} -C {{download_folder}} creates={{download_folder}}/{{java_name}}"
+ 
+  - name: Fix ownership 
+    file: "state=directory path={{download_folder}}/{{java_name}} owner=root group=root recurse=yes"
+ 
+  - name: Create Java folder
+    file: "state=directory path={{java_folder}}"
+ 
+  - name: Move Java to final folder
+    command: "mv {{download_folder}}/{{java_name}} {{java_folder}} creates={{java_folder}}/{{java_name}}"
+ 
+  - name: Create symlink for easier update
+    file: "state=link src={{java_folder}}/{{java_name}} dest={{java_folder}}/{{java_alias}}"
+ 
+  - name: Make Java available for system
+    command: 'update-alternatives --install "/usr/bin/java" "java" "{{java_folder}}/{{java_alias}}/bin/java" 1'
